@@ -1,0 +1,47 @@
+{
+  "name": "niji",
+  "version": "1.0.0",
+  "description": "Generate release logs in markdown using the Niji Commit Format and the Github Comparison API.",
+  "main": "bin/main",
+  "bin": {
+    "niji": "bin/main"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/niji-commit/generator.git"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "api",
+    "commit",
+    "history",
+    "changelog",
+    "releaselog",
+    "releases",
+    "tags",
+    "branches",
+    "record",
+    "markdown",
+    "generator",
+    "niji",
+    "format",
+    "log",
+    "git",
+    "github",
+    "versioning"
+  ],
+  "author": "Nijiko Yonskai <nijikokun@gmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "array-to-table": "^1.0.1",
+    "breeze": "^1.0.0",
+    "commander": "^2.8.1",
+    "github": "^0.2.4",
+    "lodash": "^3.10.0",
+    "moment": "^2.10.6",
+    "prompt": "^0.2.14",
+    "semver": "^5.0.1"
+  }
+}

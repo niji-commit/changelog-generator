@@ -1,0 +1,171 @@
+#!/usr/bin/env node
+
+var arrayToTable = require('array-to-table')
+var program = require('commander')
+var breeze = require('breeze')
+var github = require("github")
+var semver = require('semver')
+var moment = require('moment')
+var prompt = require('prompt')
+var pkg = require('../package.json')
+
+// Regex Helpers
+var scopeRegex = /^\w+\s?\(([^\)]+)\)\:/
+var shaRegex = /(\b[0-9a-f]{5,40})/img
+var issueRegex = /(?!\s\#)([0-9]+)/ig
+
+// Github Agent
+
+var gh = new github({
+  version: "3.0.0",
+  headers: {
+    "user-agent": "changelog-generator"
+  }
+})
+
+program.version(pkg.version)
+program.option('-o, --out [directory]', 'Location of the directory to output changelog')
+program.option('-r, --repo [name]', 'Repository name')
+program.option('-u, --user [name]', 'Repository username')
+program.option('-h, --head [name]', 'Commit head')
+program.option('-b, --base [name]', 'Commit base')
+program.option('-t, --token [token]', 'Github Token')
+program.parse(process.argv)
+
+gh.authenticate({
+  type: "token",
+  token: program.token
+})
+
+function determineType (message) {
+  message = message ? message.toLowerCase() : ''
+  switch (true) {
+    case (message.indexOf('feat') === 0):
+      return 'Feature'
+    case (message.indexOf('docs') === 0):
+      return 'Documentation'
+    case (message.indexOf('style') === 0):
+      return 'Style'
+    case (message.indexOf('test') === 0):
+      return 'Tests'
+    case (message.indexOf('perf') === 0):
+      return 'Performance'
+    case (message.indexOf('add') !== -1):
+      return 'Added'
+    case (message.indexOf('change') !== -1):
+      return 'Changed'
+    case (message.indexOf('fix') !== -1):
+      return 'Fixed'
+    case (message.indexOf('revert') !== -1):
+      return 'Reverted'
+    default:
+      return 'Changed'
+  }
+}
+
+function determineScope (message) {
+  var matches = message.match(scopeRegex)
+  return matches.length ? matches[1] : ""
+}
+
+function determineIssues (message) {
+  var repoUrl = [ 'https://github.com/', program.user, '/', program.repo, '/' ].join('')
+  var issues = message.match(issueRegex)
+  var output = ""
+
+  ;(issues || []).forEach(function (id) {
+    output += "[#" + id + "](" + repoUrl + "commit/" + id + "), "
+  })
+
+  return output.length ? output.substr(0, output.length - 2) : output
+}
+
+function determineDescription (message) {
+  var repoUrl = [ 'https://github.com/', program.user, '/', program.repo, '/' ].join('')
+  var index
+
+  // Remove type and scope.
+  message = message.split(":")
+  message.shift()
+  message = message.join(":")
+
+  // Get first entry
+  message = message.split("\n")
+  message = message.shift()
+
+  // Replace issues with link
+  ;(message.match(issueRegex) || []).forEach(function (issueId) {
+    message = message.replace('#' + issueId, '[#' + issueId + '](' + repoUrl + 'issues/' + issueId + ')')
+  })
+
+  // Replace sha with link
+  ;(message.match(shaRegex) || []).forEach(function (sha) {
+    message = message.replace(sha, '[' + sha.substr(0, 7) + '](' + repoUrl + 'commit/' + sha + ')')
+  })
+
+  // Return message
+  return message
+}
+
+function generateMarkdownResult (commits) {
+  var parts = program.head.split('/')
+  var version = 'v' + semver.clean(parts[parts.length-1])
+  var output = []
+  output.push(['## [', version, '] | ', moment().format('YYYY-MM-DD')].join(''))
+  output.push(['*branch:', '[`', program.head, '`](https://github.com/', program.user, '/', program.repo, '/tree/', program.head, ')*'].join(''))
+  output.push('')
+  try {
+    output.push(arrayToTable(commits))
+  } catch (e) {}
+  output.push(['[', version, ']: ', 'https://github.com/', program.user, '/', program.repo, '/compare/', program.base, '...', program.head].join(''))
+  return output.join("\r\n")
+}
+
+function compareCommits (next) {
+  gh.repos.compareCommits({
+    user: program.user,
+    repo: program.repo,
+    base: program.base,
+    head: program.head
+  }, next)
+}
+
+function transformCommits (next, results) {
+  var commits = []
+
+  results.commits.forEach(function (entry) {
+    var message = entry.commit.message.toLowerCase()
+    var uri = entry.html_url.split('/')
+    if (message.indexOf('merge pull') !== -1 || message.indexOf(':') === -1) {
+      return
+    }
+
+    commits.push({
+      "Type": determineType(entry.commit.message),
+      "Scope": determineScope(entry.commit.message),
+      "Link": ['[', uri[uri.length - 1].substring(0, 8) ,'](', entry.html_url, ')'].join(''),
+      "References": determineIssues(entry.commit.message),
+      "Description": determineDescription(entry.commit.message)
+    })
+  })
+
+  next(null, commits)
+}
+
+function outputReleaseResultsFile (next, commits) {
+  console.info('coming soon...')
+}
+
+function consoleLogReleaseResults (next, commits) {
+  console.log(generateMarkdownResult(commits))
+}
+
+// Like a breeze.
+breeze()
+.then(compareCommits)
+.then(transformCommits)
+.some(program.out, outputReleaseResultsFile)
+.none(consoleLogReleaseResults)
+.catch(function onError (err) {
+  console.error('Unable to generate release results:', err)
+})
