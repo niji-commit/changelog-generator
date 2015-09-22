@@ -86,3 +86,5 @@ Licensed under [The MIT License](LICENSE).
 [npm-version]: https://img.shields.io/npm/v/niji.svg?style=flat
 [npm-downloads]: https://img.shields.io/npm/dm/niji.svg?style=flat
 [niji-format]: https://github.com/niji-commit/format
+[david-url]: https://david-dm.org/niji-commit/generator
+[david-image]: https://img.shields.io/david/niji-commit/generator.svg?style=flat
