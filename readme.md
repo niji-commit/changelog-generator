@@ -8,7 +8,11 @@
 Turn your commit messages into a digestible change-log / release-log in markdown using the Github Comparison API, and
 some extremely gnarly logic.
 
-Commit messages **must** adhere to the [Niji Commit Format][niji-format].
+## Rules
+
+1. Commit messages **must** adhere to the [Niji Commit Format][niji-format].
+2. Comparisons must be made using **tags** (`v2.10.4`) or **branches** (`release/v2.10.4`) to take advantage of the
+versioning support as seen below. (otherwise only the table / branch info will be useful.)
 
 ## Install
 
