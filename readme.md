@@ -1,4 +1,4 @@
-# Niji Commit Generator
+# Niji Commit Log Generator
 
 [![version][npm-version]][npm-url]
 [![License][npm-license]][license-url]
