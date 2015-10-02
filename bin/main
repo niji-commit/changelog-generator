@@ -11,7 +11,7 @@ var pkg = require('../package.json')
 
 // Regex Helpers
 var scopeRegex = /^\w+\s?\(([^\)]+)\)\:/
-var shaRegex = /(\b[0-9a-f]{5,40})/img
+var shaRegex = /(\b[0-9a-f]{7,40})/img
 var issueRegex = /(?!\s\#)([0-9]+)/ig
 
 // Github Agent
@@ -65,7 +65,7 @@ function determineType (message) {
 
 function determineScope (message) {
   var matches = message.match(scopeRegex)
-  return matches.length ? matches[1] : ""
+  return matches && matches.length ? matches[1] : ""
 }
 
 function determineIssues (message) {
@@ -116,7 +116,9 @@ function generateMarkdownResult (commits) {
   output.push('')
   try {
     output.push(arrayToTable(commits))
-  } catch (e) {}
+  } catch (e) {
+    console.log(e)
+  }
   output.push(['[', version, ']: ', 'https://github.com/', program.user, '/', program.repo, '/compare/', program.base, '...', program.head].join(''))
   return output.join("\r\n")
 }
@@ -136,6 +138,7 @@ function transformCommits (next, results) {
   results.commits.forEach(function (entry) {
     var message = entry.commit.message.toLowerCase()
     var uri = entry.html_url.split('/')
+
     if (message.indexOf('merge pull') !== -1 || message.indexOf(':') === -1) {
       return
     }
@@ -167,5 +170,5 @@ breeze()
 .some(program.out, outputReleaseResultsFile)
 .none(consoleLogReleaseResults)
 .catch(function onError (err) {
-  console.error('Unable to generate release results:', err)
+  console.error('Unable to generate release results:', err.message)
 })

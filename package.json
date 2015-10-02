@@ -36,7 +36,7 @@
   "license": "MIT",
   "dependencies": {
     "array-to-table": "^1.0.1",
-    "breeze": "^1.0.0",
+    "breeze": "^1.1.7",
     "commander": "^2.8.1",
     "github": "^0.2.4",
     "lodash": "^3.10.0",
