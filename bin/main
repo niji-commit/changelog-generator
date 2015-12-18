@@ -171,4 +171,5 @@ breeze()
 .none(consoleLogReleaseResults)
 .catch(function onError (err) {
   console.error('Unable to generate release results:', err.message)
+  console.error(err.stack)
 })
