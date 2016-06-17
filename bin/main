@@ -174,7 +174,7 @@ function transformCommits (next, results) {
     var message = entry.commit.message.toLowerCase()
     var uri = entry.html_url.split('/')
 
-    if (message.indexOf('merge pull') !== -1 || message.indexOf(':') === -1) {
+    if (message.indexOf('merge') !== -1 || message.indexOf(':') === -1) {
       return
     }
 
