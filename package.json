@@ -4,7 +4,8 @@
   "description": "Generate release logs in markdown using the Niji Commit Format and the Github Comparison API.",
   "main": "bin/main",
   "bin": {
-    "niji": "bin/main"
+    "niji": "bin/main",
+    "changelog": "bin/main"
   },
   "repository": {
     "type": "git",

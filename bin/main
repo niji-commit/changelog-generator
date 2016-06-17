@@ -27,7 +27,7 @@ program.option('-r, --repo [name]', 'Repository name')
 program.option('-u, --user [name]', 'Repository username')
 program.option('-h, --head [name]', 'Commit head')
 program.option('-b, --base [name]', 'Commit base')
-program.option('-f, --format [option]', 'Changelog Format Type (table (default), node)')
+program.option('-f, --format [option]', 'Changelog Format Type (table (default), node, node+)')
 program.option('-s, --sort [option]', 'Sorting option (time (default), type, scope, author)')
 program.option('-t, --token [token]', 'Github Token')
 program.option('-c, --configure [token]', 'Configure github token for future reference')
@@ -66,6 +66,8 @@ function determineType (message) {
       return 'Chore'
     case (message.indexOf('release') === 0):
       return 'Release'
+    case (message.indexOf('misc') === 0):
+      return 'Misc'
     case (message.indexOf('fix') !== -1):
       return 'Fixed'
     case (message.indexOf('revert') !== -1):

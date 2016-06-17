@@ -1,16 +1,16 @@
-# Niji Commit Log Generator
+# Changelog Generator
 
 [![version][npm-version]][npm-url]
 [![License][npm-license]][license-url]
 [![Downloads][npm-downloads]][npm-url]
 [![Dependencies][david-image]][david-url]
 
-Turn your commit messages into a digestible change-log / release-log in markdown using the Github Comparison API, and
+Generate changelog using your git commit messages into a digestible change-log / release-log in markdown using the Github Comparison API, and
 some extremely gnarly logic.
 
 ## Rules
 
-1. Commit messages **must** adhere to the [Niji Commit Format][niji-format].
+1. Commit messages **must** adhere to the [Niji Commit Format][niji-format], also supports [Angular Commit Message Convention][angular-convention].
 2. Comparisons must be made using **tags** (`v2.10.4`) or **branches** (`release/v2.10.4`) to take advantage of 
 version numbers.
 
@@ -107,3 +107,4 @@ Licensed under [The MIT License](LICENSE).
 [niji-format]: https://github.com/niji-commit/format
 [david-url]: https://david-dm.org/niji-commit/generator
 [david-image]: https://img.shields.io/david/niji-commit/generator.svg?style=flat
+[angular-convention]: https://github.com/angular/angular.js/blob/master/CONTRIBUTING.md#-git-commit-guidelines
