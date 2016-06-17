@@ -62,14 +62,14 @@ function determineType (message) {
       return 'Tests'
     case (message.indexOf('perf') === 0):
       return 'Performance'
-    case (message.indexOf('add') !== -1):
-      return 'Added'
-    case (message.indexOf('change') !== -1):
-      return 'Changed'
     case (message.indexOf('fix') !== -1):
       return 'Fixed'
     case (message.indexOf('revert') !== -1):
       return 'Reverted'
+    case (message.indexOf('add') !== -1):
+      return 'Added'
+    case (message.indexOf('change') !== -1):
+      return 'Changed'
     default:
       return 'Changed'
   }
