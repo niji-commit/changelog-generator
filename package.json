@@ -36,12 +36,13 @@
   "license": "MIT",
   "dependencies": {
     "array-to-table": "^1.0.1",
-    "breeze": "^1.1.7",
-    "commander": "^2.8.1",
-    "github": "^0.2.4",
+    "breeze": "^1.2.2",
+    "commander": "^2.9.0",
+    "easy-file": "^0.1.0",
+    "github": "^1.1.2",
     "lodash": "^3.10.0",
-    "moment": "^2.10.6",
-    "prompt": "^0.2.14",
-    "semver": "^5.0.1"
+    "moment": "^2.13.0",
+    "npmlog": "^3.1.2",
+    "semver": "^5.1.0"
   }
 }

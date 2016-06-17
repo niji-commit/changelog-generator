@@ -6,22 +6,20 @@ var breeze = require('breeze')
 var github = require("github")
 var semver = require('semver')
 var moment = require('moment')
-var prompt = require('prompt')
 var pkg = require('../package.json')
+var log = require('npmlog')
+var file = require('easy-file')
+
+// Directory Location
+var configurationFileLocation = [__dirname, '.config'].join('/')
 
 // Regex Helpers
 var scopeRegex = /^\w+\s?\(([^\)]+)\)\:/
 var shaRegex = /(\b[0-9a-f]{7,40})/img
-var issueRegex = /(?!\s\#)([0-9]+)/ig
+var issueRegex = /\#([0-9]+)/ig
 
-// Github Agent
-
-var gh = new github({
-  version: "3.0.0",
-  headers: {
-    "user-agent": "changelog-generator"
-  }
-})
+// Configure logger
+log.heading = "niji"
 
 program.version(pkg.version)
 program.option('-o, --out [directory]', 'Location of the directory to output changelog')
@@ -29,13 +27,27 @@ program.option('-r, --repo [name]', 'Repository name')
 program.option('-u, --user [name]', 'Repository username')
 program.option('-h, --head [name]', 'Commit head')
 program.option('-b, --base [name]', 'Commit base')
+program.option('-f, --format [option]', 'Changelog Format Type (table (default), node)')
+program.option('-s, --sort [option]', 'Sorting option (time (default), type, scope, author)')
 program.option('-t, --token [token]', 'Github Token')
+program.option('-c, --configure [token]', 'Configure github token for future reference')
 program.parse(process.argv)
 
-gh.authenticate({
-  type: "token",
-  token: program.token
-})
+function getVersion (head) {
+  if (!head) return 'Unknown'
+  var parts = head.split('/')
+  return head.indexOf('/') > -1 ? 'v' + semver.clean(parts[parts.length-1]) : head
+}
+
+function sort (fields) {
+  return function (a, b) {
+    return fields.map(function (o) {
+      var dir = 1
+      if (o[0] === '-') dir = -1, o=o.substring(1)
+      return a[o] > b[o] ? dir : a[o] < b[o] ? -(dir) : 0
+    }).reduce(function (p, n) { return p ? p : n }, 0)
+  }
+}
 
 function determineType (message) {
   message = message ? message.toLowerCase() : ''
@@ -74,7 +86,7 @@ function determineIssues (message) {
   var output = ""
 
   ;(issues || []).forEach(function (id) {
-    output += "[#" + id + "](" + repoUrl + "commit/" + id + "), "
+    output += "[`#" + id + "``](" + repoUrl + "commit/" + id + "), "
   })
 
   return output.length ? output.substr(0, output.length - 2) : output
@@ -95,41 +107,64 @@ function determineDescription (message) {
 
   // Replace issues with link
   ;(message.match(issueRegex) || []).forEach(function (issueId) {
-    message = message.replace('#' + issueId, '[#' + issueId + '](' + repoUrl + 'issues/' + issueId + ')')
+    message = message.replace('#' + issueId, '[`#' + issueId + '`](' + repoUrl + 'issues/' + issueId + ')')
   })
 
   // Replace sha with link
   ;(message.match(shaRegex) || []).forEach(function (sha) {
-    message = message.replace(sha, '[' + sha.substr(0, 7) + '](' + repoUrl + 'commit/' + sha + ')')
+    message = message.replace(sha, '[`' + sha.substr(0, 7) + '`](' + repoUrl + 'commit/' + sha + ')')
   })
 
   // Return message
   return message
 }
 
-function generateMarkdownResult (commits) {
-  var parts = program.head.split('/')
-  var version = 'v' + semver.clean(parts[parts.length-1])
+function generateNodeChangelogResult (commits) {
   var output = []
+  var version = getVersion(program.head)
+
+  output.push(['## ', moment().format('YYYY-MM-DD'), ', Version ', version].join(''))
+  output.push('### Notable Changes')
+  output.push('')
+  output.push('- Enter Notable Changes Here')
+  output.push('')
+  output.push('### Commits')
+
+  commits.forEach(function (commit) {
+    output.push(['- [', commit.Link, '] - **', commit.Scope, ':** ', commit.Description, ' (', commit.Author, ')'].join(''))
+  })
+
+  return output.join("\r\n")
+}
+
+function generateDefaultChangelogResult (commits) {
+  var output = []
+  var version = getVersion(program.head)
+
   output.push(['## [', version, '] | ', moment().format('YYYY-MM-DD')].join(''))
   output.push(['*branch:', '[`', program.head, '`](https://github.com/', program.user, '/', program.repo, '/tree/', program.head, ')*'].join(''))
   output.push('')
+
   try {
     output.push(arrayToTable(commits))
   } catch (e) {
     console.log(e)
   }
+
   output.push(['[', version, ']: ', 'https://github.com/', program.user, '/', program.repo, '/compare/', program.base, '...', program.head].join(''))
+
   return output.join("\r\n")
 }
 
-function compareCommits (next) {
-  gh.repos.compareCommits({
-    user: program.user,
-    repo: program.repo,
-    base: program.base,
-    head: program.head
-  }, next)
+function compareCommits (gh) {
+  return function (next) {
+    gh.repos.compareCommits({
+      user: program.user,
+      repo: program.repo,
+      base: program.base,
+      head: program.head
+    }, next)
+  }
 }
 
 function transformCommits (next, results) {
@@ -146,11 +181,32 @@ function transformCommits (next, results) {
     commits.push({
       "Type": determineType(entry.commit.message),
       "Scope": determineScope(entry.commit.message),
-      "Link": ['[', uri[uri.length - 1].substring(0, 8) ,'](', entry.html_url, ')'].join(''),
+      "Link": ['[`', uri[uri.length - 1].substring(0, 10) ,'`](', entry.html_url, ')'].join(''),
+      "Description": determineDescription(entry.commit.message),
       "References": determineIssues(entry.commit.message),
-      "Description": determineDescription(entry.commit.message)
+      "Author": entry.commit.author.name
     })
   })
+
+  if (program.sort === 'type,scope') {
+    commits = commits.sort(sort(['Type', 'Scope']))
+  }
+
+  if (program.sort === 'scope,type') {
+    commits = commits.sort(sort(['Scope', 'Type']))
+  }
+
+  if (program.sort === 'scope') {
+    commits = commits.sort(sort(['Scope']))
+  }
+
+  if (program.sort === 'type') {
+    commits = commits.sort(sort(['Type']))
+  }
+
+  if (program.sort === 'author') {
+    commits = commits.sort(sort(['Author']))
+  }
 
   next(null, commits)
 }
@@ -160,16 +216,50 @@ function outputReleaseResultsFile (next, commits) {
 }
 
 function consoleLogReleaseResults (next, commits) {
-  console.log(generateMarkdownResult(commits))
+  console.log(program.format === 'node' ? generateNodeChangelogResult(commits) : generateDefaultChangelogResult(commits))
 }
 
-// Like a breeze.
-breeze()
-.then(compareCommits)
-.then(transformCommits)
-.some(program.out, outputReleaseResultsFile)
-.none(consoleLogReleaseResults)
-.catch(function onError (err) {
-  console.error('Unable to generate release results:', err.message)
-  console.error(err.stack)
+if (program.configure) {
+  log.info('setting', 'configuration file: %s', configurationFileLocation)
+  log.info('config', 'set "token" "%s"', program.configure)
+
+  try {
+    file.write(configurationFileLocation, JSON.stringify({ token: program.configure }, null, 2))
+  } catch (e) {
+    log.error('config', e.message)
+    process.exit(1)
+  } finally {
+    log.info('ok')
+    process.exit(0)
+  }
+}
+
+file.read(configurationFileLocation, function (config) {
+  var flow = breeze()
+  var gh = new github({
+    version: "3.0.0",
+    headers: {
+      "user-agent": "changelog-generator"
+    }
+  })
+
+  if (!program.token && config) {
+    config = JSON.parse(config)
+    program.token = config.token
+  }
+
+  gh.authenticate({
+    type: "token",
+    token: program.token
+  })
+
+  flow.then(compareCommits(gh))
+  flow.then(transformCommits)
+  flow.some(program.out, outputReleaseResultsFile)
+  flow.none(consoleLogReleaseResults)
+
+  flow.catch(function onError (err) {
+    console.error('Unable to generate release results:', err.message)
+    console.error(err.stack)
+  })
 })
