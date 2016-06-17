@@ -62,6 +62,10 @@ function determineType (message) {
       return 'Tests'
     case (message.indexOf('perf') === 0):
       return 'Performance'
+    case (message.indexOf('chore') === 0):
+      return 'Chore'
+    case (message.indexOf('release') === 0):
+      return 'Release'
     case (message.indexOf('fix') !== -1):
       return 'Fixed'
     case (message.indexOf('revert') !== -1):
