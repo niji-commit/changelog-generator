@@ -80,13 +80,13 @@ function determineScope (message) {
   return matches && matches.length ? matches[1] : ""
 }
 
-function determineIssues (message) {
+function determineReferences (message) {
   var repoUrl = [ 'https://github.com/', program.user, '/', program.repo, '/' ].join('')
   var issues = message.match(issueRegex)
   var output = ""
 
   ;(issues || []).forEach(function (id) {
-    output += "[`#" + id + "``](" + repoUrl + "commit/" + id + "), "
+    output += "[`" + id + "`](" + repoUrl + "commit/" + id + "), "
   })
 
   return output.length ? output.substr(0, output.length - 2) : output
@@ -107,7 +107,7 @@ function determineDescription (message) {
 
   // Replace issues with link
   ;(message.match(issueRegex) || []).forEach(function (issueId) {
-    message = message.replace('#' + issueId, '[`#' + issueId + '`](' + repoUrl + 'issues/' + issueId + ')')
+    message = message.replace(issueId, '[`' + issueId + '`](' + repoUrl + 'issues/' + issueId + ')')
   })
 
   // Replace sha with link
@@ -183,7 +183,7 @@ function transformCommits (next, results) {
       "Scope": determineScope(entry.commit.message),
       "Link": ['[`', uri[uri.length - 1].substring(0, 10) ,'`](', entry.html_url, ')'].join(''),
       "Description": determineDescription(entry.commit.message),
-      "References": determineIssues(entry.commit.message),
+      "References": determineReferences(entry.commit.message),
       "Author": entry.commit.author.name
     })
   })
