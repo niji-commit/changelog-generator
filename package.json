@@ -1,6 +1,6 @@
 {
   "name": "niji",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "Generate release logs in markdown using the Niji Commit Format and the Github Comparison API.",
   "main": "bin/main",
   "bin": {
