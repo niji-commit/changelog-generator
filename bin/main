@@ -27,7 +27,7 @@ program.option('-r, --repo [name]', 'Repository name')
 program.option('-u, --user [name]', 'Repository username')
 program.option('-h, --head [name]', 'Commit head')
 program.option('-b, --base [name]', 'Commit base')
-program.option('-f, --format [option]', 'Changelog Format Type (table (default), node, node+)')
+program.option('-f, --format [option]', 'Changelog Format Type (table (default), node, node+, angular)')
 program.option('-s, --sort [option]', 'Sorting option (time (default), type, scope, author)')
 program.option('-t, --token [token]', 'Github Token')
 program.option('-c, --configure [token]', 'Configure github token for future reference')
@@ -102,18 +102,21 @@ function determineDescription (message) {
   var repoUrl = [ 'https://github.com/', program.user, '/', program.repo, '/' ].join('')
   var index
 
-  // Remove type and scope.
-  message = message.split(":")
-  message.shift()
-  message = message.join(":")
-
   // Get first entry
   message = message.split("\n")
   message = message.shift()
 
+  // Remove type and scope.
+  if (message.indexOf(':') > -1) {
+    message = message.split(":")
+    message.shift()
+    message = message.join(":")
+  }
+
   // Replace issues with link
   ;(message.match(issueRegex) || []).forEach(function (issueId) {
-    message = message.replace(issueId, '[`' + issueId + '`](' + repoUrl + 'issues/' + issueId + ')')
+    var id = issueId.replace('#', '')
+    message = message.replace(issueId, '[`' + issueId + '`](' + repoUrl + 'issues/' + id + ')')
   })
 
   // Replace sha with link
@@ -123,6 +126,40 @@ function determineDescription (message) {
 
   // Return message
   return message
+}
+
+function generateAngularChangelog (commits) {
+  var version = getVersion(program.head)
+  let versionLink = ['[`', version, '`](https://github.com/', program.user, '/', program.repo, '/tree/', program.head, ')'].join('')
+  let changelog = {}
+  let output = []
+
+  output.push(['## ', versionLink, ' ', `(${ moment().format('YYYY-MM-DD') })`].join(''))
+  output.push('')
+
+  commits.filter(commit => commit.Type && commit.Scope).sort((a, b) => {
+    let aScope = a.Scope.toLowerCase()
+    let bScope = b.Scope.toLowerCase()
+    return aScope === bScope ? 0 : aScope < bScope ? -1 : 1
+  }).forEach(commit => {
+    if (!commit.Type || !commit.Scope) return
+    if (!changelog[commit.Type]) {
+      changelog[commit.Type] = []
+    }
+
+    changelog[commit.Type].push([
+      '-', `**${commit.Scope}:**`, commit.Description, `(${commit.Link})`
+    ].join(' '))
+  })
+
+  Object.keys(changelog).forEach(type => {
+    output.push([
+      `### ${type}`, changelog[type].join('\r\n')
+    ].join('\r\n'))
+    output.push('')
+  })
+
+  return output.join('\r\n')
 }
 
 function generateNodeChangelogResult (commits) {
@@ -137,7 +174,7 @@ function generateNodeChangelogResult (commits) {
   output.push('### Commits')
 
   commits.forEach(function (commit) {
-    output.push(['- [', commit.Link, '] - **', commit.Scope, ':** ', commit.Description, ' (', commit.Author, ')'].join(''))
+    output.push(['- [', commit.Link, '] ' + (commit.Scope ? ('**' + commit.Type + '(' + commit.Scope + ')' + ':** ') : ''), commit.Description, ' (', commit.Author, ')'].join(''))
   })
 
   return output.join("\r\n")
@@ -222,7 +259,13 @@ function outputReleaseResultsFile (next, commits) {
 }
 
 function consoleLogReleaseResults (next, commits) {
-  console.log(program.format === 'node' ? generateNodeChangelogResult(commits) : generateDefaultChangelogResult(commits))
+  console.log(
+      program.format === 'node' 
+    ? generateNodeChangelogResult(commits)
+    : program.format === 'angular'
+    ? generateAngularChangelog(commits)
+    : generateDefaultChangelogResult(commits)
+  )
 }
 
 if (program.configure) {
